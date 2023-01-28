@@ -1,0 +1,50 @@
+name: Publish to PyPI / GitHub
+on: [ push, pull_request ]
+jobs:
+  build:
+    name: Build Dist
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.x"
+
+      - name: Build source and wheel distributions
+        run: |
+          python -m pip install --upgrade build twine wheel
+          python setup.py bdist_wheel --universal
+
+      - name: Check Build Results
+        run: |
+          twine check --strict dist/*
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: dist/
+
+  publish:
+    name: Publish distribution to PyPI
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Publish distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Get Asset name
+        run: |
+          export PKG=$(ls dist/ | grep tar)
+          set -- $PKG
+          echo "name=$1" >> $GITHUB_ENV
+
+      - name: Upload Release Asset (sdist) to GitHub
+        uses: softprops/action-gh-release@master
+        with:
+          files: dist/
