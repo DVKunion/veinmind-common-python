@@ -6,6 +6,8 @@
 
 import io
 import os
+import re
+import subprocess
 import sys
 from shutil import rmtree
 
@@ -18,7 +20,7 @@ URL = 'https://github.com/chaitin/veinmind-common-python'
 EMAIL = 'info@chaitin.com'
 AUTHOR = 'chaitin'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = 'v1.2.0'
+VERSION = 'v0.0.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -47,10 +49,34 @@ except FileNotFoundError:
 
 # Load the package's __version__.py module as a dictionary.
 about = {}
+# Generate version based on git when it is managed there.
+# If the file is managed by git, always fetch the version from
+# executing "git describe".
+if os.path.exists(".git"):
+    output = subprocess.getoutput("git describe --tags")
+    m = re.match(r"^v(\d+[.]\d+[.]\d+)(-(\d+)-(\w+))?$", output)
+    if m is not None:
+        tag, extra, rev, commit = m.groups()
+        # Generate version conforming to PEP-440 to play with pip.
+        VERSION = tag
+        if extra is not None:
+            VERSION = "{tag}.dev{rev}+{commit}".format(
+                tag=tag, rev=rev, commit=commit)
+
+# If it is currently inside some python virtualenv, attempt to
+# bail out by inspecting the veinmind.egg-info/PKG-INFO file.
+elif os.path.exists("veinmind.egg-info/PKG-INFO"):
+    with open("veinmind.egg-info/PKG-INFO") as pkginfo:
+        for line in pkginfo.readlines():
+            m = re.match(r"^Version: (.*)$", line)
+            if m is not None:
+                VERSION = m.groups()[0]
+
 if not VERSION:
     project_slug = NAME.lower().replace("-", "_").replace(" ", "_")
     with open(os.path.join(here, project_slug, '__version__.py')) as f:
         exec(f.read(), about)
+
 else:
     about['__version__'] = VERSION
 
