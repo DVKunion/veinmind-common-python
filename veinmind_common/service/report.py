@@ -3,7 +3,7 @@ import time as timep
 import jsonpickle
 import json
 import os, stat, pwd, grp
-from veinmind import service, log
+from veinmind import service, log, docker, containerd, image, container, tarball, remote, iac
 
 _namespace = "github.com/chaitin/veinmind-tools/veinmind-common/go/service/report"
 
@@ -186,8 +186,9 @@ class ReportEvent():
     alert_details = []
 
     def __init__(self, id, level, detect_type, event_type, alert_type,
-                 alert_details, t=timep.strftime(_format)):
+                 alert_details, native_object, t=timep.strftime(_format)):
         self.id = id
+        self.object = NativeObject(native_object)
         self.time = t
         self.level = level
         self.detect_type = detect_type
@@ -195,6 +196,36 @@ class ReportEvent():
         self.alert_type = alert_type
         self.alert_details = alert_details
 
+
+class NativeObject():
+    def __init__(self, object):
+        self.raw = object
+
+        # runtime type
+        if isinstance(object, docker.Image) or isinstance(object, docker.Container):
+            self.runtime_type = "docker"
+        elif isinstance(object, containerd.Image) or isinstance(object, containerd.Container):
+            self.runtime_type = "containerd"
+        elif isinstance(object, remote.Image):
+            self.runtime_type = "remote"
+        elif isinstance(object, tarball.Image):
+            self.runtime_type = "tarball"
+
+        # object type
+        if isinstance(object, image.Image):
+            self.type = "image"
+            self.id = object.id()
+        elif isinstance(object, container.Container):
+            self.type = "container"
+            self.id = object.id()
+        elif isinstance(object, iac.IAC):
+            self.type = "iac"
+            self.id = object.path
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['raw']
+        return state
 
 @service.service(_namespace, "report")
 def _report(evt):
@@ -204,12 +235,12 @@ def _report(evt):
 def report(evt, *args, **kwargs):
     if service.is_hosted():
         try:
-            evt_dict = json.loads(jsonpickle.encode(evt))
+            evt_dict = json.loads(jsonpickle.encode(evt, unpicklable=False))
             _report(evt_dict)
         except RuntimeError as e:
             log.error(e)
     else:
-        log.warn(jsonpickle.encode(evt, indent=4))
+        log.warn(jsonpickle.encode(evt, indent=4, unpicklable=False))
 
 
 class Entry:
