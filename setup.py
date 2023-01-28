@@ -55,15 +55,13 @@ about = {}
 if os.path.exists(".git"):
     output = subprocess.getoutput("git describe --tags")
     m = re.match(r"^v(\d+[.]\d+[.]\d+)(-(\d+)-(\w+))?$", output)
-    if m is None:
-        raise ValueError("invalid version: {!r}".format(output))
-    tag, extra, rev, commit = m.groups()
-
-    # Generate version conforming to PEP-440 to play with pip.
-    VERSION = tag
-    if extra is not None:
-        VERSION = "{tag}.dev{rev}+{commit}".format(
-            tag=tag, rev=rev, commit=commit)
+    if m is not None:
+        tag, extra, rev, commit = m.groups()
+        # Generate version conforming to PEP-440 to play with pip.
+        VERSION = tag
+        if extra is not None:
+            VERSION = "{tag}.dev{rev}+{commit}".format(
+                tag=tag, rev=rev, commit=commit)
 
 # If it is currently inside some python virtualenv, attempt to
 # bail out by inspecting the veinmind.egg-info/PKG-INFO file.
