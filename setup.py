@@ -18,11 +18,11 @@ URL = 'https://github.com/chaitin/veinmind-common-python'
 EMAIL = 'info@chaitin.com'
 AUTHOR = 'chaitin'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = 'v1.2.0'
+VERSION = 'v1.1.9-r1'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'jsonpickle', 'veinmind', 'dataclasses'
+    'jsonpickle', 'veinmind'
 ]
 
 # What packages are optional?
